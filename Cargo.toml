@@ -1,0 +1,26 @@
+[package]
+name = "rust_authz"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+path = "src/lib.rs"
+
+# Double square brackets as it's an array, can have multiple binaries
+[[bin]]
+path = "src/main.rs"
+name = "rust_authz" 
+
+[dependencies]
+# We are using the latest beta release of actix-web
+# that relies on tokio 1.x.x
+# There is _some_ turbulence when working with betas,
+# we are pinning a few other supporting packages to ensure
+# compatibility.
+actix-web = "=4.0.0-beta.8"
+actix-http = "=3.0.0-beta.8"
+
+[dev-dependencies]
+actix-rt = "2"
+reqwest = "0.11"
+tokio = "1"
