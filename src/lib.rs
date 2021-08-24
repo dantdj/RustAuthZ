@@ -5,7 +5,7 @@ async fn health_check() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-pub async fn run() -> Result<Server, std::io::Error> {
+pub fn run() -> Result<Server, std::io::Error> {
     let server = HttpServer::new(|| 
         App::new()
             .route("/ping", web::get().to(health_check))

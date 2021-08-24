@@ -17,7 +17,7 @@ async fn health_check_works() {
     assert_eq!(Some(0), response.content_length());
 }
 
-fn spawn_app() -> std::io::Result<()> {
+fn spawn_app() {
     let server = rust_authz::run().expect("Failed to bind address");
-    let _ = tokio::spawn(server) ; 
+    let _ = tokio::spawn(server); 
 }
