@@ -19,6 +19,9 @@ name = "rust_authz"
 # compatibility.
 actix-web = "=4.0.0-beta.8"
 actix-http = "=3.0.0-beta.8"
+# We need the optional `derive`feature to use `serde`'s procedural macros:
+# `#[derive(Serialize)]`and `#[derive(Deserialize)]`.
+serde = { version = "1", features = ["derive"]}
 
 [dev-dependencies]
 actix-rt = "2"

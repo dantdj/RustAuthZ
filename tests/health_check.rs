@@ -1,13 +1,12 @@
 #[actix_rt::test]
 async fn health_check_works() {
     // Arrange
-    spawn_app();
-
+    let address = spawn_app();
     let client = reqwest::Client::new();
 
     // Act
     let response = client
-        .get("http://127.0.0.1:8080/ping")
+        .get(format!("{}/ping", &address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -17,7 +16,18 @@ async fn health_check_works() {
     assert_eq!(Some(0), response.content_length());
 }
 
-fn spawn_app() {
-    let server = rust_authz::run().expect("Failed to bind address");
-    let _ = tokio::spawn(server); 
+use std::net::TcpListener;
+
+/// Creates an instance of the application server, and returns the formatted IP
+/// and port combo to access the instance in a test.
+fn spawn_app() -> String {
+    // Setting port number to 0 means it uses a random available port
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    // Extract port number for use in tests
+    let port = listener.local_addr().unwrap().port();
+
+    let server = rust_authz::startup::run(listener).expect("Failed to bind address");
+    let _ = tokio::spawn(server);
+
+    format!("http://127.0.0.1:{}", port)
 }
