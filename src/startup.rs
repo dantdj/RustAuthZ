@@ -1,6 +1,5 @@
-use actix_web::middleware::Logger;
 use crate::routes::{health_check, validate};
-use actix_web::{dev::Server, web, App, HttpServer};
+use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use std::net::TcpListener;
 
 pub fn run(listener: TcpListener) -> Result<Server, std::io::Error> {

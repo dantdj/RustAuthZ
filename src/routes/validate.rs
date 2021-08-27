@@ -1,8 +1,7 @@
-use uuid::Uuid;
 use actix_web::{web, HttpResponse, Responder};
-use jsonwebtoken::{decode, decode_header, Algorithm, Validation, DecodingKey};
-use std::error::Error;
-use std::fmt;
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use std::{error::Error, fmt};
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct JwtBody {
@@ -13,7 +12,6 @@ pub struct JwtBody {
 pub struct ValidateResponse {
     valid: bool,
 }
-
 
 pub async fn validate(jwt_body: web::Json<JwtBody>) -> impl Responder {
     let request_id = Uuid::new_v4();
@@ -26,10 +24,8 @@ pub async fn validate(jwt_body: web::Json<JwtBody>) -> impl Responder {
     match validate_jwt(&jwt_body.jwt).await {
         Ok(valid_token) => {
             tracing::info!("Token validated successfully");
-            HttpResponse::Ok().json(ValidateResponse {
-                valid: valid_token
-            })
-        }, 
+            HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
+        }
         Err(e) => {
             tracing::error!("Failed to validate JWT: {:?}", e);
             HttpResponse::Unauthorized().finish()
@@ -51,14 +47,18 @@ async fn validate_jwt(jwt: &String) -> Result<bool, Box<dyn std::error::Error>> 
 
     let key_to_use = get_key_to_use(&keys.keys, header.kid.unwrap())?;
 
-    let token = decode::<Claims>(&jwt, &DecodingKey::from_rsa_components(&key_to_use.n, &key_to_use.e), &Validation::new(Algorithm::RS256))?;
+    let token = decode::<Claims>(
+        &jwt,
+        &DecodingKey::from_rsa_components(&key_to_use.n, &key_to_use.e),
+        &Validation::new(Algorithm::RS256),
+    )?;
 
     Ok(true)
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct GoogleSigningKeysResponse {
-    keys: Vec<GoogleSigningKey>
+    keys: Vec<GoogleSigningKey>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -70,8 +70,12 @@ struct GoogleSigningKey {
     kid: String,
 }
 
-async fn get_google_signing_keys() -> Result<GoogleSigningKeysResponse, Box<dyn std::error::Error>> {
-    let response_body = reqwest::get("https://www.googleapis.com/oauth2/v3/certs").await?.text().await?;
+async fn get_google_signing_keys() -> Result<GoogleSigningKeysResponse, Box<dyn std::error::Error>>
+{
+    let response_body = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
+        .await?
+        .text()
+        .await?;
     let signing_keys: GoogleSigningKeysResponse = serde_json::from_str(&response_body)?;
     Ok(signing_keys)
 }
@@ -87,12 +91,17 @@ impl fmt::Display for KeyNotFound {
 
 impl Error for KeyNotFound {}
 
-fn get_key_to_use(keys: &Vec<GoogleSigningKey>, kid: String) -> Result<&GoogleSigningKey, Box<dyn std::error::Error>> {
+fn get_key_to_use(
+    keys: &Vec<GoogleSigningKey>,
+    kid: String,
+) -> Result<&GoogleSigningKey, Box<dyn std::error::Error>> {
     for key in keys.iter() {
         if key.kid == kid {
-            return Ok(key)
+            return Ok(key);
         }
     }
 
-    Err(Box::new(KeyNotFound("No key could be found in `keys` that matched the provided `kid`".into())))
+    Err(Box::new(KeyNotFound(
+        "No key could be found in `keys` that matched the provided `kid`".into(),
+    )))
 }
