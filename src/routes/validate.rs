@@ -73,7 +73,6 @@ struct GoogleSigningKey {
 async fn get_google_signing_keys() -> Result<GoogleSigningKeysResponse, Box<dyn std::error::Error>> {
     let response_body = reqwest::get("https://www.googleapis.com/oauth2/v3/certs").await?.text().await?;
     let signing_keys: GoogleSigningKeysResponse = serde_json::from_str(&response_body)?;
-    tracing::info!("{}", signing_keys.keys[0].alg);
     Ok(signing_keys)
 }
 
