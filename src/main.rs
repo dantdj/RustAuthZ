@@ -14,7 +14,7 @@ async fn main() -> std::io::Result<()> {
     set_global_default(subscriber).expect("Failed to set subscriber");
 
     let configuration = get_configuration().expect("Failed to read configuration");
-    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let address = format!("0.0.0.0:{}", configuration.application_port);
     let listener = TcpListener::bind(address).expect("Failed to bind port");
     
     run(listener)?.await
