@@ -3,6 +3,7 @@ use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use std::{error::Error, fmt};
 use uuid::Uuid;
 use crate::key_providers::{ AsyncKeyProvider, GoogleKeyProvider};
+use crate::state::AppState;
 
 #[derive(serde::Deserialize)]
 pub struct JwtBody {
@@ -14,7 +15,7 @@ pub struct ValidateResponse {
     valid: bool,
 }
 
-pub async fn validate(jwt_body: web::Json<JwtBody>) -> impl Responder {
+pub async fn validate(jwt_body: web::Json<JwtBody>, data: web::Data<AppState>) -> impl Responder {
     let request_id = Uuid::new_v4();
     let request_span = tracing::info_span!(
         "Validating JWT",
@@ -22,7 +23,7 @@ pub async fn validate(jwt_body: web::Json<JwtBody>) -> impl Responder {
     );
 
     let _request_span_guard = request_span.enter();
-    match validate_jwt(&jwt_body.jwt).await {
+    match validate_jwt(&jwt_body.jwt, data.provider).await {
         Ok(valid_token) => {
             tracing::info!("Token validated successfully");
             HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
@@ -41,7 +42,7 @@ struct Claims {
     email: String,
 }
 
-async fn validate_jwt(jwt: &String) -> Result<bool, Box<dyn std::error::Error>> {
+async fn validate_jwt(jwt: &String, provider: GoogleKeyProvider) -> Result<bool, Box<dyn std::error::Error>> {
     let keys = get_google_signing_keys().await?;
     
     let header = decode_header(&jwt)?;
@@ -52,7 +53,7 @@ async fn validate_jwt(jwt: &String) -> Result<bool, Box<dyn std::error::Error>> 
 
     let token = decode::<Claims>(
         &jwt,
-        &DecodingKey::from_rsa_components(&key_to_use.n, &key_to_use.e),
+        &DecodingKey::from_rsa_components(&key_to_use.modulus, &key_to_use.exponent),
         &Validation::new(Algorithm::RS256),
     )?;
 

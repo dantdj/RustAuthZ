@@ -113,9 +113,11 @@ impl AsyncKeyProvider for GoogleKeyProvider {
     async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()> {
         if let Some(ref cached_keys) = self.cached {
             if self.expiration_time > Instant::now() {
+                tracing::info!("Returning key from cache...");
                 return Ok(cached_keys.get_key(key_id));
             }
         }
+        tracing::info!("Getting new keys...");
         Ok(self.download_keys_async().await?.get_key(key_id))
     }
 }
