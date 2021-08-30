@@ -2,6 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use std::{error::Error, fmt};
 use uuid::Uuid;
+use crate::key_providers::{ AsyncKeyProvider, GoogleKeyProvider};
 
 #[derive(serde::Deserialize)]
 pub struct JwtBody {
@@ -42,10 +43,12 @@ struct Claims {
 
 async fn validate_jwt(jwt: &String) -> Result<bool, Box<dyn std::error::Error>> {
     let keys = get_google_signing_keys().await?;
-
+    
     let header = decode_header(&jwt)?;
 
-    let key_to_use = get_key_to_use(&keys.keys, header.kid.unwrap())?;
+    let mut provider = GoogleKeyProvider::default();
+    let key_to_use = provider.get_key_async(&header.clone().kid.unwrap()).await.unwrap().unwrap();
+    //let key_to_use = get_key_to_use(&keys.keys, header.kid.unwrap())?;
 
     let token = decode::<Claims>(
         &jwt,
