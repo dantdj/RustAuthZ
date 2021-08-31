@@ -54,6 +54,7 @@ pub trait AsyncKeyProvider {
     async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()>;
 }
 
+#[derive(Clone)]
 pub struct GoogleKeyProvider {
     cached: Option<JwkSet>,
     expiration_time: Instant,

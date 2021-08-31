@@ -3,7 +3,7 @@ use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use std::{error::Error, fmt};
 use uuid::Uuid;
 use crate::key_providers::{ AsyncKeyProvider, GoogleKeyProvider};
-use crate::state::AppState;
+use std::sync::Mutex;
 
 #[derive(serde::Deserialize)]
 pub struct JwtBody {
@@ -15,7 +15,7 @@ pub struct ValidateResponse {
     valid: bool,
 }
 
-pub async fn validate(jwt_body: web::Json<JwtBody>, data: web::Data<AppState>) -> impl Responder {
+pub async fn validate(jwt_body: web::Json<JwtBody>, provider: GoogleKeyProvider) -> impl Responder {
     let request_id = Uuid::new_v4();
     let request_span = tracing::info_span!(
         "Validating JWT",
@@ -23,7 +23,7 @@ pub async fn validate(jwt_body: web::Json<JwtBody>, data: web::Data<AppState>) -
     );
 
     let _request_span_guard = request_span.enter();
-    match validate_jwt(&jwt_body.jwt, data.provider).await {
+    match validate_jwt(&jwt_body.jwt, provider).await {
         Ok(valid_token) => {
             tracing::info!("Token validated successfully");
             HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
