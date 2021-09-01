@@ -46,10 +46,6 @@ impl JwkSet {
     }
 }
 
-pub trait KeyProvider {
-    fn get_key(&mut self, key_id: &str) -> Result<Option<Jwk>, ()>;
-}
-
 #[async_trait]
 pub trait AsyncKeyProvider {
     async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()>;
@@ -87,27 +83,12 @@ impl GoogleKeyProvider {
         }
         Ok(self.cached.as_ref().unwrap())
     }
-    pub fn download_keys(&mut self) -> Result<&JwkSet, ()> {
-        let result = reqwest::blocking::get(GOOGLE_CERT_URL).map_err(|_| ())?;
-        self.process_response(&result.headers().clone(), &result.text().map_err(|_| ())?)
-    }
     async fn download_keys_async(&mut self) -> Result<&JwkSet, ()> {
         let result = reqwest::get(GOOGLE_CERT_URL).await.map_err(|_| ())?;
         self.process_response(
             &result.headers().clone(),
             &result.text().await.map_err(|_| ())?,
         )
-    }
-}
-
-impl KeyProvider for GoogleKeyProvider {
-    fn get_key(&mut self, key_id: &str) -> Result<Option<Jwk>, ()> {
-        if let Some(ref cached_keys) = self.cached {
-            if self.expiration_time > Instant::now() {
-                return Ok(cached_keys.get_key(key_id));
-            }
-        }
-        Ok(self.download_keys()?.get_key(key_id))
     }
 }
 

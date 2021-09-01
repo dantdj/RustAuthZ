@@ -53,7 +53,10 @@ async fn validate_jwt(
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let header = decode_header(&jwt)?;
     let mut guard = provider.lock().unwrap();
-    let key_to_use = guard.get_key_async(&"hi".to_string()).await.unwrap();
+    let key_to_use = match guard.get_key_async(&"hi".to_string()).await {
+        Ok(key) => key.unwrap(),
+        Err(_) => panic!("TODO: Handle"),
+    };
     drop(guard);
 
     let token = decode::<Claims>(
