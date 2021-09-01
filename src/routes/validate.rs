@@ -26,9 +26,8 @@ pub async fn validate(
     );
 
     let _request_span_guard = request_span.enter();
-    let provider_arc = provider.into_inner();
 
-    match validate_jwt(&jwt_body.jwt, provider_arc).await {
+    match validate_jwt(&jwt_body.jwt, provider.into_inner()).await {
         Ok(valid_token) => {
             tracing::info!("Token validated successfully");
             HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
