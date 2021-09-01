@@ -1,9 +1,9 @@
+use crate::key_providers::{AsyncKeyProvider, GoogleKeyProvider};
 use actix_web::{web, HttpResponse, Responder};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
-use uuid::Uuid;
 use std::boxed::Box;
-use crate::key_providers::{ AsyncKeyProvider, GoogleKeyProvider};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct JwtBody {
@@ -15,7 +15,10 @@ pub struct ValidateResponse {
     valid: bool,
 }
 
-pub async fn validate(jwt_body: web::Json<JwtBody>, provider: web::Data<Mutex<GoogleKeyProvider>>) -> impl Responder {
+pub async fn validate(
+    jwt_body: web::Json<JwtBody>,
+    provider: web::Data<Mutex<GoogleKeyProvider>>,
+) -> impl Responder {
     let request_id = Uuid::new_v4();
     let request_span = tracing::info_span!(
         "Validating JWT",
@@ -44,9 +47,14 @@ struct Claims {
     email: String,
 }
 
-async fn validate_jwt(jwt: &String, provider: Arc<GoogleKeyProvider>) -> Result<bool, Box<dyn std::error::Error>> {    
+async fn validate_jwt(
+    jwt: &String,
+    provider: Arc<Mutex<GoogleKeyProvider>>,
+) -> Result<bool, Box<dyn std::error::Error>> {
     let header = decode_header(&jwt)?;
-    let key_to_use = provider.lock().unwrap().get_key_async(&header.clone().kid.unwrap()).await.unwrap().unwrap();
+    let mut guard = provider.lock().unwrap();
+    let key_to_use = guard.get_key_async(&"hi".to_string()).await.unwrap();
+    drop(guard);
 
     let token = decode::<Claims>(
         &jwt,

@@ -1,8 +1,8 @@
+use crate::key_providers::GoogleKeyProvider;
 use crate::routes::{health_check, validate};
-use crate::key_providers::{GoogleKeyProvider};
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use std::net::TcpListener;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 pub fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
     let key_provider = web::Data::new(Mutex::new(GoogleKeyProvider::default()));

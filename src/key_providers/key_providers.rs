@@ -1,12 +1,12 @@
-use std::time::Instant;
-use reqwest::{header::CACHE_CONTROL};
 use async_trait::async_trait;
 use headers::{Header, HeaderMap};
+use reqwest::header::CACHE_CONTROL;
 use std::any::Any;
+use std::time::Instant;
 
 const GOOGLE_CERT_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 
-/// This is based on purely what the Google JWKs contain - will need extending 
+/// This is based on purely what the Google JWKs contain - will need extending
 /// when supporting new providers
 #[derive(serde::Deserialize, Clone)]
 pub struct Jwk {
