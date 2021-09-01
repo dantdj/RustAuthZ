@@ -2,6 +2,7 @@ use std::time::Instant;
 use reqwest::{header::CACHE_CONTROL};
 use async_trait::async_trait;
 use headers::{Header, HeaderMap};
+use std::any::Any;
 
 const GOOGLE_CERT_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 
@@ -52,6 +53,7 @@ pub trait KeyProvider {
 #[async_trait]
 pub trait AsyncKeyProvider {
     async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 #[derive(Clone)]
@@ -120,5 +122,9 @@ impl AsyncKeyProvider for GoogleKeyProvider {
         }
         tracing::info!("Getting new keys...");
         Ok(self.download_keys_async().await?.get_key(key_id))
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
