@@ -2,6 +2,8 @@ use async_trait::async_trait;
 use headers::{Header, HeaderMap};
 use reqwest::header::CACHE_CONTROL;
 use std::any::Any;
+use std::error::Error;
+use std::fmt;
 use std::time::Instant;
 
 const GOOGLE_CERT_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
@@ -46,9 +48,34 @@ impl JwkSet {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct KeyNotFoundError {
+    pub details: String,
+}
+
+impl KeyNotFoundError {
+    fn new(message: &str) -> KeyNotFoundError {
+        KeyNotFoundError {
+            details: message.to_string(),
+        }
+    }
+}
+
+impl fmt::Display for KeyNotFoundError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "couldn't find key matching provided key id")
+    }
+}
+
+impl Error for KeyNotFoundError {
+    fn description(&self) -> &str {
+        &self.details
+    }
+}
+
 #[async_trait]
 pub trait AsyncKeyProvider {
-    async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()>;
+    async fn get_key_async(&mut self, key_id: &str) -> Result<Jwk, KeyNotFoundError>;
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -68,7 +95,11 @@ impl Default for GoogleKeyProvider {
 }
 
 impl GoogleKeyProvider {
-    fn process_response(&mut self, headers: &HeaderMap, text: &str) -> Result<&JwkSet, ()> {
+    fn process_response(
+        &mut self,
+        headers: &HeaderMap,
+        text: &str,
+    ) -> Result<&JwkSet, KeyNotFoundError> {
         let mut expiration_time = None;
         let x = headers.get_all(CACHE_CONTROL);
         if let Ok(cache_header) = headers::CacheControl::decode(&mut x.iter()) {
@@ -76,33 +107,33 @@ impl GoogleKeyProvider {
                 expiration_time = Some(Instant::now() + max_age);
             }
         }
-        let key_set = serde_json::from_str(&text).map_err(|_| ())?;
+        let key_set = serde_json::from_str(&text).unwrap();
         if let Some(expiration_time) = expiration_time {
             self.cached = Some(key_set);
             self.expiration_time = expiration_time;
         }
         Ok(self.cached.as_ref().unwrap())
     }
-    async fn download_keys_async(&mut self) -> Result<&JwkSet, ()> {
-        let result = reqwest::get(GOOGLE_CERT_URL).await.map_err(|_| ())?;
-        self.process_response(
-            &result.headers().clone(),
-            &result.text().await.map_err(|_| ())?,
-        )
+    async fn download_keys_async(&mut self) -> Result<&JwkSet, KeyNotFoundError> {
+        let result = reqwest::get(GOOGLE_CERT_URL).await.map_err(|_| ()).unwrap();
+        self.process_response(&result.headers().clone(), &result.text().await.unwrap())
     }
 }
 
 #[async_trait]
 impl AsyncKeyProvider for GoogleKeyProvider {
-    async fn get_key_async(&mut self, key_id: &str) -> Result<Option<Jwk>, ()> {
+    async fn get_key_async(&mut self, key_id: &str) -> Result<Jwk, KeyNotFoundError> {
         if let Some(ref cached_keys) = self.cached {
             if self.expiration_time > Instant::now() {
                 tracing::info!("Returning key from cache...");
-                return Ok(cached_keys.get_key(key_id));
+                match cached_keys.get_key(key_id) {
+                    Some(key) => return Ok(key),
+                    None => return Err(KeyNotFoundError::new("not found")),
+                }
             }
         }
         tracing::info!("Getting new keys...");
-        Ok(self.download_keys_async().await?.get_key(key_id))
+        Ok(self.download_keys_async().await?.get_key(key_id).unwrap())
     }
 
     fn as_any(&self) -> &dyn Any {

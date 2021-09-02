@@ -2,6 +2,8 @@ use crate::key_providers::{AsyncKeyProvider, GoogleKeyProvider};
 use actix_web::{web, HttpResponse, Responder};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use std::boxed::Box;
+use std::error::Error;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use uuid::Uuid;
@@ -54,12 +56,16 @@ struct Claims {
 async fn validate_jwt(
     jwt: &String,
     provider: Arc<Mutex<GoogleKeyProvider>>,
-) -> Result<bool, Box<dyn std::error::Error>> {
-    let header = decode_header(&jwt)?;
+) -> Result<bool, InvalidKeyError> {
+    let header = match decode_header(&jwt) {
+        Ok(header) => header,
+        Err(e) => return Err(InvalidKeyError::new(&e.to_string())),
+    };
     let mut guard = provider.lock().unwrap();
+
     let key_to_use = match guard.get_key_async(&header.clone().kid.unwrap()).await {
-        Ok(key) => key.unwrap(),
-        Err(_) => panic!("TODO: Handle"),
+        Ok(key) => key,
+        Err(e) => return Err(InvalidKeyError::new(&e.details)),
     };
     drop(guard);
 
@@ -67,7 +73,32 @@ async fn validate_jwt(
         &jwt,
         &DecodingKey::from_rsa_components(&key_to_use.modulus, &key_to_use.exponent),
         &Validation::new(Algorithm::RS256),
-    )?;
+    );
 
     Ok(true)
+}
+
+#[derive(Debug, Clone)]
+pub struct InvalidKeyError {
+    pub details: String,
+}
+
+impl InvalidKeyError {
+    fn new(message: &str) -> InvalidKeyError {
+        InvalidKeyError {
+            details: message.to_string(),
+        }
+    }
+}
+
+impl fmt::Display for InvalidKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "provided key failed validation")
+    }
+}
+
+impl Error for InvalidKeyError {
+    fn description(&self) -> &str {
+        &self.details
+    }
 }
