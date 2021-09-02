@@ -3,6 +3,7 @@ use actix_web::{web, HttpResponse, Responder};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use std::boxed::Box;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
@@ -19,6 +20,7 @@ pub async fn validate(
     jwt_body: web::Json<JwtBody>,
     provider: web::Data<Mutex<GoogleKeyProvider>>,
 ) -> impl Responder {
+    let before = Instant::now();
     let request_id = Uuid::new_v4();
     let request_span = tracing::info_span!(
         "Validating JWT",
@@ -29,7 +31,7 @@ pub async fn validate(
 
     match validate_jwt(&jwt_body.jwt, provider.into_inner()).await {
         Ok(valid_token) => {
-            tracing::info!("Token validated successfully");
+            tracing::info!("Token validated successfully in {:?}", before.elapsed());
             HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
         }
         Err(e) => {
@@ -41,8 +43,11 @@ pub async fn validate(
 
 #[derive(serde::Deserialize)]
 struct Claims {
+    /// The expiry time of the token
     exp: usize,
+    /// The name of the individual the token was issued to
     name: String,
+    /// The email of the individual the token was issued to
     email: String,
 }
 
@@ -52,7 +57,7 @@ async fn validate_jwt(
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let header = decode_header(&jwt)?;
     let mut guard = provider.lock().unwrap();
-    let key_to_use = match guard.get_key_async(&"hi".to_string()).await {
+    let key_to_use = match guard.get_key_async(&header.clone().kid.unwrap()).await {
         Ok(key) => key.unwrap(),
         Err(_) => panic!("TODO: Handle"),
     };
