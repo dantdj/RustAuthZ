@@ -107,7 +107,8 @@ impl GoogleKeyProvider {
                 expiration_time = Some(Instant::now() + max_age);
             }
         }
-        let key_set = serde_json::from_str(&text).unwrap();
+        let key_set = serde_json::from_str(&text)
+            .map_err(|_| KeyNotFoundError::new("failed to parse keyset"))?;
         if let Some(expiration_time) = expiration_time {
             self.cached = Some(key_set);
             self.expiration_time = expiration_time;
@@ -115,8 +116,16 @@ impl GoogleKeyProvider {
         Ok(self.cached.as_ref().unwrap())
     }
     async fn download_keys_async(&mut self) -> Result<&JwkSet, KeyNotFoundError> {
-        let result = reqwest::get(GOOGLE_CERT_URL).await.map_err(|_| ()).unwrap();
-        self.process_response(&result.headers().clone(), &result.text().await.unwrap())
+        let result = reqwest::get(GOOGLE_CERT_URL)
+            .await
+            .map_err(|_| KeyNotFoundError::new("failed to request keys from Google"))?;
+        self.process_response(
+            &result.headers().clone(),
+            &result
+                .text()
+                .await
+                .map_err(|_| KeyNotFoundError::new("failed to extract text from result"))?,
+        )
     }
 }
 
@@ -133,7 +142,11 @@ impl AsyncKeyProvider for GoogleKeyProvider {
             }
         }
         tracing::info!("Getting new keys...");
-        Ok(self.download_keys_async().await?.get_key(key_id).unwrap())
+        
+        match self.download_keys_async().await?.get_key(key_id) {
+            Some(key) => Ok(key),
+            None => return Err(KeyNotFoundError::new("couldn't get key"))
+        }
     }
 
     fn as_any(&self) -> &dyn Any {
