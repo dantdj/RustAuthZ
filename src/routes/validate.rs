@@ -1,4 +1,4 @@
-use crate::validator::Validator;
+use crate::validator::{Validator, Claims};
 use actix_web::{web, HttpResponse, Responder};
 use std::sync::Mutex;
 use std::time::Instant;
@@ -12,6 +12,7 @@ pub struct JwtBody {
 #[derive(serde::Serialize)]
 pub struct ValidateResponse {
     valid: bool,
+    claims: Claims,
 }
 
 pub async fn validate(
@@ -33,7 +34,7 @@ pub async fn validate(
         Ok(valid_token) => {
             tracing::info!("Token validated successfully in {:?}", before.elapsed());
             drop(guard);
-            HttpResponse::Ok().json(ValidateResponse { valid: valid_token })
+            HttpResponse::Ok().json(ValidateResponse { valid: valid_token.valid, claims: valid_token.token_data.claims })
         }
         Err(e) => {
             tracing::error!("Failed to validate JWT: {:?}", e);
