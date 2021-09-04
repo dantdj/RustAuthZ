@@ -107,7 +107,7 @@ impl GoogleKeyProvider {
                 expiration_time = Some(Instant::now() + max_age);
             }
         }
-        let key_set = serde_json::from_str(&text)
+        let key_set = serde_json::from_str(text)
             .map_err(|_| KeyNotFoundError::new("failed to parse keyset"))?;
         if let Some(expiration_time) = expiration_time {
             self.cached = Some(key_set);

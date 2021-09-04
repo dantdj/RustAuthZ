@@ -26,8 +26,8 @@ impl Validator {
             key_provider: GoogleKeyProvider::default(),
         }
     }
-    pub async fn validate_jwt(&mut self, jwt: &String) -> Result<bool, InvalidKeyError> {
-        let header = match decode_header(&jwt) {
+    pub async fn validate_jwt(&mut self, jwt: &str) -> Result<bool, InvalidKeyError> {
+        let header = match decode_header(jwt) {
             Ok(header) => header,
             Err(e) => return Err(InvalidKeyError::new(&e.to_string())),
         };
@@ -43,7 +43,7 @@ impl Validator {
         validation_params.set_audience(&[self.audience.clone()]);
     
         let token = decode::<Claims>(
-            &jwt,
+            jwt,
             &DecodingKey::from_rsa_components(&key_to_use.modulus, &key_to_use.exponent),
             &validation_params,
         );
