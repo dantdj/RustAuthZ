@@ -137,7 +137,7 @@ impl AsyncKeyProvider for GoogleKeyProvider {
                 tracing::info!("Returning key from cache...");
                 match cached_keys.get_key(key_id) {
                     Some(key) => return Ok(key),
-                    None => return Err(KeyNotFoundError::new("not found")),
+                    None => return Err(KeyNotFoundError::new("couldn't find key matching provided key ID in cache")),
                 }
             }
         }
