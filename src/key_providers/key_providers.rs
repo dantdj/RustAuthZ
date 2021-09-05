@@ -2,9 +2,8 @@ use async_trait::async_trait;
 use headers::{Header, HeaderMap};
 use reqwest::header::CACHE_CONTROL;
 use std::any::Any;
-use std::error::Error;
-use std::fmt;
 use std::time::Instant;
+use crate::errors::KeyNotFoundError;
 
 const GOOGLE_CERT_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 
@@ -45,31 +44,6 @@ pub struct JwkSet {
 impl JwkSet {
     pub fn get_key(&self, id: &str) -> Option<Jwk> {
         self.keys.iter().find(|key| key.key_id == id).cloned()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct KeyNotFoundError {
-    pub details: String,
-}
-
-impl KeyNotFoundError {
-    fn new(message: &str) -> KeyNotFoundError {
-        KeyNotFoundError {
-            details: message.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for KeyNotFoundError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "couldn't find key matching provided key id")
-    }
-}
-
-impl Error for KeyNotFoundError {
-    fn description(&self) -> &str {
-        &self.details
     }
 }
 

@@ -7,7 +7,7 @@ pub struct KeyNotFoundError {
 }
 
 impl KeyNotFoundError {
-    fn new(message: &str) -> KeyNotFoundError {
+    pub fn new(message: &str) -> KeyNotFoundError {
         KeyNotFoundError {
             details: message.to_string(),
         }

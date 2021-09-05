@@ -32,8 +32,13 @@ impl Validator {
             Ok(header) => header,
             Err(e) => return Err(InvalidKeyError::new(&e.to_string())),
         };
+
+        let kid = match header.clone().kid {
+            Some(kid) => kid,
+            None => return Err(InvalidKeyError::new("couldn't find key ID")),
+        };
     
-        let key_to_use = match self.key_provider.get_key_async(&header.clone().kid.unwrap()).await {
+        let key_to_use = match self.key_provider.get_key_async(&kid).await {
             Ok(key) => key,
             Err(e) => return Err(InvalidKeyError::new(&e.details)),
         };
