@@ -1,4 +1,4 @@
-use crate::validator::{Validator, Claims};
+use crate::validator::{Claims, Validator};
 use actix_web::{web, HttpResponse, Responder};
 use std::sync::Mutex;
 use std::time::Instant;
@@ -28,13 +28,18 @@ pub async fn validate(
 
     let _request_span_guard = request_span.enter();
 
+    // Any panic that occurs while the guard is in place will poison the mutex, so keep
+    // potential panics (like unwrap) to a minimum. We can do it here though.
     let mut guard = validator.lock().unwrap();
 
     match guard.validate_jwt(&jwt_body.jwt).await {
         Ok(valid_token) => {
             tracing::info!("Token validated successfully in {:?}", before.elapsed());
             drop(guard);
-            HttpResponse::Ok().json(ValidateResponse { valid: valid_token.valid, claims: valid_token.token_data.claims })
+            HttpResponse::Ok().json(ValidateResponse {
+                valid: valid_token.valid,
+                claims: valid_token.token_data.claims,
+            })
         }
         Err(e) => {
             tracing::error!("Failed to validate JWT: {:?}", e);

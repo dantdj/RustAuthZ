@@ -1,9 +1,9 @@
+use crate::errors::KeyNotFoundError;
 use async_trait::async_trait;
 use headers::{Header, HeaderMap};
 use reqwest::header::CACHE_CONTROL;
 use std::any::Any;
 use std::time::Instant;
-use crate::errors::KeyNotFoundError;
 
 const GOOGLE_CERT_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 
@@ -111,15 +111,19 @@ impl AsyncKeyProvider for GoogleKeyProvider {
                 tracing::info!("Returning key from cache...");
                 match cached_keys.get_key(key_id) {
                     Some(key) => return Ok(key),
-                    None => return Err(KeyNotFoundError::new("couldn't find key matching provided key ID in cache")),
+                    None => {
+                        return Err(KeyNotFoundError::new(
+                            "couldn't find key matching provided key ID in cache",
+                        ))
+                    }
                 }
             }
         }
         tracing::info!("Getting new keys...");
-        
+
         match self.download_keys_async().await?.get_key(key_id) {
             Some(key) => Ok(key),
-            None => return Err(KeyNotFoundError::new("couldn't get key"))
+            None => return Err(KeyNotFoundError::new("couldn't get key")),
         }
     }
 

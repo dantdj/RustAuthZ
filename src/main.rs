@@ -19,5 +19,10 @@ async fn main() -> std::io::Result<()> {
     let address = format!("0.0.0.0:{}", configuration.application_port);
     let listener = TcpListener::bind(address).expect("Failed to bind port");
 
-    run(listener, configuration.oauth.audience, configuration.oauth.issuer)?.await
+    run(
+        listener,
+        configuration.oauth.audience,
+        configuration.oauth.issuer,
+    )?
+    .await
 }

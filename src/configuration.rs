@@ -7,7 +7,7 @@ pub struct Settings {
 #[derive(serde::Deserialize)]
 pub struct Oauth {
     pub audience: String,
-    pub issuer: String
+    pub issuer: String,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

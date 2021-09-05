@@ -1,5 +1,5 @@
-use crate::key_providers::{AsyncKeyProvider, GoogleKeyProvider};
 use crate::errors::InvalidKeyError;
+use crate::key_providers::{AsyncKeyProvider, GoogleKeyProvider};
 use crate::models::Token;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 
@@ -37,7 +37,7 @@ impl Validator {
             Some(kid) => kid,
             None => return Err(InvalidKeyError::new("couldn't find key ID")),
         };
-    
+
         let key_to_use = match self.key_provider.get_key_async(&kid).await {
             Ok(key) => key,
             Err(e) => return Err(InvalidKeyError::new(&e.details)),
@@ -46,7 +46,7 @@ impl Validator {
         let mut validation_params = Validation::new(Algorithm::RS256);
         validation_params.iss = Some(self.issuer.clone());
         validation_params.set_audience(&[self.audience.clone()]);
-    
+
         let token_data = decode::<Claims>(
             jwt,
             &DecodingKey::from_rsa_components(&key_to_use.modulus, &key_to_use.exponent),
@@ -55,9 +55,9 @@ impl Validator {
 
         let token = Token {
             valid: true,
-            token_data: token_data.unwrap()
+            token_data: token_data.unwrap(),
         };
-    
+
         Ok(token)
     }
 }
