@@ -1,8 +1,4 @@
-on:
-  pull_request:
-  push:
-    branches:
-      - main
+on: push
 
 
 name: Check and Lint
